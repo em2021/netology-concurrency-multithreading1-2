@@ -1,4 +1,9 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class Main {
 
@@ -9,9 +14,10 @@ public class Main {
         }
 
         long startTs = System.currentTimeMillis(); // start time
-        List<Thread> threads = new ArrayList<>();
+        final ExecutorService threadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        List<Future<Integer>> tasks = new ArrayList<>();
         for (String text : texts) {
-            Thread t = new Thread(() -> {
+            Future<Integer> task = threadPool.submit(() -> {
                 int maxSize = 0;
                 for (int i = 0; i < text.length(); i++) {
                     for (int j = 0; j < text.length(); j++) {
@@ -30,14 +36,22 @@ public class Main {
                         }
                     }
                 }
-                System.out.println(text.substring(0, 100) + " -> " + maxSize);
+                return maxSize;
             });
-            t.start();
-            threads.add(t);
+            tasks.add(task);
         }
-        for (Thread thread : threads) {
-            thread.join(); // зависаем, ждём когда поток объект которого лежит в thread завершится
-        }
+        int max = tasks.stream().mapToInt(a -> {
+                    int m = 0;
+                    try {
+                        m = a.get();
+                    } catch (Exception e) {
+
+                    }
+                    return m;
+                })
+                .max().getAsInt();
+        System.out.println("Max value is: " + max);
+        threadPool.shutdown();
         long endTs = System.currentTimeMillis(); // end time
 
         System.out.println("Time: " + (endTs - startTs) + "ms");
